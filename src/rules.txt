@@ -1,0 +1,30 @@
+
+-------------------------------------------
+            RULES OF THE GAME
+-------------------------------------------
+
+- The goal of the player is to guess all the letters of random word(s) 
+that will appear on the screen for each game level. 
+- In order to win the game, the player must guess all random word(s) that
+will appear in all five levels of the game. 
+- The number of letters of each random word(s) to guess for a level may be 
+determined by counting the number of placeholders (i.e '-' or dashes) that 
+will be displayed prior to the first guess. 
+- In each level, the game will allow the user 10 chances to guess the word(s).
+- Every time the user chooses an incorrect letter, their chances decrease as 
+well as the game draws one element of the hanged man stick figure to indicate
+the number of chances that are left for the user.
+- Each time the player enters a correct letter, the same letter will replace
+the placeholder associated with the actual occurrence(s) of that letter within
+the word(s). 
+- If the user guesses all the letters of the word before he/she runs out of
+chances, the player will advance to the next level.
+- If the player runs out of chances within a level, the player loses the game.
+- Otherwise, if the player completes all five levels without running out of 
+chances, he or she wins the game.
+- The random word to guess for each level is taken from any of the three 
+categories that the player chooses prior to starting the game.
+- To keep track of the letters that the user had guessed in each level, the 
+remaining letter of the alphabet (upper case only) will also be shown on the
+screen as well as the letters that were incorrectly guessed.
+
