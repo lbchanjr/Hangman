@@ -12,15 +12,8 @@ import java.util.Scanner;
 
 public class Main {
 
-	public static final String[][] words= {{"AFGHANISTAN", "CANADA", "PHILIPPINES", "UNITED STATES OF AMERICA", "SWITZERLAND", "KUWAIT", "AUSTRALIA", "CHINA", "GREAT BRITAIN", "ARGENTINA"}, 
-			{"AARDVARK", "ELEPHANT", "CROCODILE", "LEOPARD", "PIRANHA", "PLATYPUS", "CHEETAH", "RHINOCEROS", "GIRAFFE", "CHICKEN"},
-			{"FERRARI", "SUBARU", "LAMBORGHINI", "MERCEDES BENZ", "VOLKSWAGEN", "ALFA ROMEO", "HONDA", "TESLA", "MITSUBISHI", "TOYOTA"}
-	};
-	
-	public static final String[] categories = {"Countries", "Animals", "Car Companies"};
 	public static final int GAME_TYPE_NEW = 1;
 	public static final int GAME_TYPE_LOADED = 3;
-	public static final int GAME_TYPE_ONGOING = 2;
 	
 	public static final int INPUT_VALID_CHAR = 0;
 	public static final int INPUT_SAVE_AND_QUIT = 1;
@@ -34,14 +27,6 @@ public class Main {
 		Scanner input = new Scanner(System.in);
 
 		int choiceInt = 0;
-
-		// WARNING: DEBUG CODE!!! 
-		//          Make sure to set DEBUG_ON to false before submitting project.
-		if(DEBUG_ON) {
-			System.out.println(Arrays.toString(words[0]));
-			System.out.println(Arrays.toString(words[1]));
-			System.out.println(Arrays.toString(words[2]));
-		}
 		
 		while(true) {
 			
@@ -76,226 +61,131 @@ public class Main {
 			
 		};
 		
-		// Create a random object to be used later for guess word indexing.
-		Random rand = new Random();			
+		int gameType = choiceInt;		
+		Hangman hangman;
 
-		int startLevel = 1;
-		int gameType = choiceInt;
-		StringBank guessString;
-		StringBank alphaString = new StringBank(' ', "ABCDEFGHIJKLMNOPQRSTUVWXYZ"); 
-		int retryChances = 10;
-		// This array list will hold all the random numbers that were generated
-		// The purpose of this array is to insure that no two random numbers of
-		// the same value will be used during the guessing game.
-		ArrayList<Integer> randomNums = new ArrayList<Integer>();
-		do {			
-			// Check if a new game was started.
-			if(gameType == GAME_TYPE_NEW || gameType == GAME_TYPE_ONGOING) {	
-				
-				
-				
-				// Check if a new game has just started.
-				if(gameType == GAME_TYPE_NEW) {
-					// New game was started... Allow user to choose categories.
-					while(true) {
-						System.out.println("\n*************************"
-								+          "\n   Select a category: "
-								+          "\n*************************");
-						System.out.println("[1] " + categories[0]);
-						System.out.println("[2] " + categories[1]);
-						System.out.println("[3] " + categories[2]);
-						
-						System.out.print("\nEnter choice [1, 2, or 3]: ");
-						String choice = input.nextLine();
-						choiceInt = checkChoice(choice, 1, 3);
+		// Check if a new game was started.
+		if(gameType == GAME_TYPE_NEW) {	
 			
-						if(choiceInt != -1) {
-							break;
-						}
-			
-					}
-					
-					// Category has been selected, switch game type to "ongoing"
-					gameType = GAME_TYPE_ONGOING;
+			// New game was started... Allow user to choose categories.
+			while(true) {
+				System.out.println("\n*************************"
+						+          "\n   Select a category: "
+						+          "\n*************************");
+				
+				String[] categories = WordBank.getCategories();
+				for (int i = 0; i < WordBank.getNumberOfCategories(); i++) {
+					System.out.println("[" + (i+1) + "] " + categories[i]);
 				}
 				
-				// WARNING: DEBUG CODE!!! 
-				//          Make sure to set DEBUG_ON to false before submitting project.
-				if(DEBUG_ON) {
-					System.out.println("DEBUG: Selection is " + choiceInt);
-					System.out.println("Creating empty save file...");
+				System.out.print("\nEnter category number: ");
+				String choice = input.nextLine();
+				choiceInt = checkChoice(choice, 1, categories.length);
+	
+				if(choiceInt != -1) {
+					break;
 				}
-				
-				// Reset saved file so that any saved information will be removed.
-				writeEmptySavedGame(); 
-				
-				// Reinitialize retry count back to 10
-				retryChances = 10;
+	
+			}
 
-				// Select a random number from 0 to size of word bank category array
-				// to use as array index for the word to guess
-				int randomWordIndex;
-				do {
-					// Keep generating a random number until a unique value is generated.
-					randomWordIndex = rand.nextInt(words[choiceInt-1].length);
-				} while(randomNums.contains(Integer.valueOf(randomWordIndex)));
+			// Create a new hangman game instance
+			hangman = new Hangman(choiceInt);
+			
+			// Reset saved file so that any saved information will be removed.
+			writeEmptySavedGame(); 
+									
+		}
+		else {
+			// Game is loaded from savedgameinfo.txt
+			
+			// Loaded game format (comma-separated info):
+			// 		<level number>,<category number>,<word being guessed>,<revealed letters>,<inputted letters>
+			
+			// Read saved game info and parse it by separating each information in a string array with comma as delimiter
+			String savedInfo = loadSavedGame();
+			String[] loadData = savedInfo.split(",");
+			
+			
+			// Setup starting game level based on saved game data
+			int startLevel = Integer.parseInt(loadData[0]);
+			
+			// load the category selected on the previous saved game.
+			choiceInt = Integer.parseInt(loadData[1]);
+			
+			StringBank guessString;
+			// Check if user has inputted any guesses for the loaded game
+			if(loadData.length > 4) {
+				// User has inputted a letter to guess the word, code may access the loadData array index 4
+				// Create an instance of the guess word string bank based on saved data.
+				guessString = new StringBank('-', loadData[2], new StringBuilder(loadData[3]), new StringBuilder(loadData[4]));
 				
-				// save the unique random number to the random number array
-				randomNums.add(Integer.valueOf(randomWordIndex));
-				
-			    
-				// WARNING: DEBUG CODE!!! 
-				//          Make sure to set DEBUG_ON to false before submitting project.
-				if(DEBUG_ON) {
-					//Thread.sleep(300);
-					System.out.println("Size of array group " + (choiceInt-1) + " is " + words[choiceInt-1].length);
-					System.out.println("Random word generated is: " + words[choiceInt-1][randomWordIndex]);
-				}
-				
-				// Create a guess string word bank based on the random word selected from the category array.
-				guessString = new StringBank('-', words[choiceInt-1][randomWordIndex]);
-				
-				// Reset letter bank
-				alphaString.resetStringBank();
-				
-				// WARNING: DEBUG CODE!!! 
-				//          Make sure to set DEBUG_ON to false before submitting project.
-				if(DEBUG_ON) {
-					System.out.println("Random word selected is: " + guessString.toString());
-				}
-										
 			}
 			else {
-				// Game is loaded from savedgameinfo.txt
-				
-				// Loaded game format (comma-separated info):
-				// 		<level number>,<category number>,<word being guessed>,<revealed letters>,<inputted letters>
-				
-				// Read saved game info and parse it by separating each information in a string array with comma as delimiter
-				String savedInfo = loadSavedGame();
-				String[] loadData = savedInfo.split(",");
-				
-				// WARNING: DEBUG CODE!!! 
-				//          Make sure to set DEBUG_ON to false before submitting project.
-				if(DEBUG_ON) {
-					System.out.println("Parsed info: " + Arrays.toString(loadData));
-				}
-				
-				// Setup starting game level based on saved game data
-				startLevel = Integer.parseInt(loadData[0]);
-				
-				// load the category selected on the previous saved game.
-				choiceInt = Integer.parseInt(loadData[1]);
-				
-				// Check if user has inputted any guesses for the loaded game
-				if(loadData.length > 4) {
-					// User has inputted a letter to guess the word, code may access the loadData array index 4
-					// Create an instance of the guess word string bank based on saved data.
-					guessString = new StringBank('-', loadData[2], new StringBuilder(loadData[3]), new StringBuilder(loadData[4]));
-					
-					// Update alphabet lookup string bank based on inputted letters.
-					char[] usedChars = loadData[4].toCharArray();
-					for ( char c : usedChars) {
-						alphaString.withdrawChar(c);
-					}
-				}
-				else {
-					// 5th parameter of saved data is empty. Do not use access loadData[4] since this will cause
-					// an array out of bounds exception.
-					// Create an instance of the guess word string bank with the fourth stringbuilder set to empty.
-					guessString = new StringBank('-', loadData[2], new StringBuilder(loadData[3]), new StringBuilder());
+				// 5th parameter of saved data is empty. Do not use access loadData[4] since this will cause
+				// an array out of bounds exception.
+				// Create an instance of the guess word string bank with the fourth stringbuilder set to empty.
+				guessString = new StringBank('-', loadData[2], new StringBuilder(loadData[3]), new StringBuilder());
 
-					// Note: there's no need to update the alphabet string bank's input history since loadData[4] is empty.
-				}
-				// Initialize chances count based on non-matching letters from previous saved game.
-				retryChances = 10 - guessString.getNonMatchingWithdrawnChars(false).length();
-				
-				// Indicate normal so that we can start anew on the next game level.
-				gameType = GAME_TYPE_ONGOING;
 			}
-			
 
+			// Initialize chances count based on non-matching letters from previous saved game.
+			int retryChances = 10 - guessString.getNonMatchingWithdrawnChars(false).length();
 			
-			while (guessString.getRevealedCharsFromInput().indexOf('-') != -1 &&
-						retryChances > 0) {
-				// Print hangman data
-				printHangmanData(guessString, alphaString, startLevel, choiceInt);
+			hangman = new Hangman(startLevel, retryChances, choiceInt, guessString);
+		}
+		
+		
+		do {						
+			// Print hangman data
+			printHangmanData(hangman.getGuessString(), hangman.getAlphaString(), hangman.getCurrentLevel(), choiceInt);
 
-				System.out.println("\n[Enter next letter to guess] -or- [Type \"quit\" to quit app without saving game] -or- [Type \"save\" to save game and quit the app]: ");
-				// Ask for additional guess input
-				String guess = input.nextLine();
-				// Check if guess is a command (i.e. "save" or "quit")
-				int checkCode = checkGuessInput(guess);
-				if(checkCode == INPUT_VALID_CHAR) {
-					checkCode =	guessString.withdrawChar(guess.charAt(0));
-					if(checkCode == 0) {
-						// 0 means that an unentered letter was inputted but did not occur in the guess word						
-						retryChances--;
-						System.out.println("\n*** The letter that you entered is not part of the word that you are guessing.\n"
-								+ "    You have " + retryChances + " chances left. ***\n");
-						alphaString.withdrawChar(guess.charAt(0));
-						delay(1000);
-					}
-					else if(checkCode > 0) {
-						// a positive number means that an unentered letter exists within the word
-						alphaString.withdrawChar(guess.charAt(0));
-					}
-					else if(checkCode == -1) {
-						// character has already been previously inputted. inform user about this error..
-						System.out.println("\n*** The character '" + guess.toUpperCase() + "' has already been used! \n"
-								+ "Try the remaining letters in the Letter Bank. ***\n");
-						delay(1000);
-					}
+			System.out.println("\n[Enter next letter to guess] -or- [Type \"quit\" to quit app without saving game] -or- [Type \"save\" to save game and quit the app]: ");
+			// Ask for additional guess input
+			String guess = input.nextLine();
+			// Check if guess is a command (i.e. "save" or "quit")
+			int checkCode = checkGuessInput(guess);
+			if(checkCode == INPUT_VALID_CHAR) {
+				checkCode = hangman.iterateGame(guess.charAt(0));
+				if(checkCode == 0) {
+					// 0 means that an un-entered letter was inputted but did not occur in the guess word						
+					System.out.println("\n*** The letter that you entered is not part of the word that you are guessing.\n"
+							+ "    You have " + hangman.getGuessRetriesLeft() + " chances left. ***\n");
+					delay(1000);
 				}
-				else if(checkCode == INPUT_SAVE_AND_QUIT) {
-					// Save current game progress to file and quit
-					saveGameInProgress(startLevel, choiceInt, guessString.getInputString(), 
-							guessString.getRevealedCharsFromInput(), guessString.getAllWithdrawnLetters());
-					retryChances = -1;  // dummy negative value to distinguish hasty exit from program
-					System.out.println("\n*** Game progress was successfully saved. ***\n");
+				else if(checkCode == -1) {
+					// character has already been previously inputted. inform user about this error..
+					System.out.println("\n*** The character '" + guess.toUpperCase() + "' has already been used! \n"
+							+ "Try the remaining letters in the Letter Bank. ***\n");
+					delay(1000);
 				}
-				else if(checkCode == INPUT_QUIT_NO_SAVE) {
-					// Quit game without saving progress
-					writeEmptySavedGame();
-					retryChances = -2;	// dummy negative value to distinguish hasty exit from program
-				}
-				else {
-					// Display if input guess contains invalid data.
-					System.out.println("\n*** Input is invalid. "
-							+ "Enter any of the remaining letters in the letter bank"
-							+ " or type \"save\" \nto save game progress and quit or "
-							+ "type \"quit\" to quit the game without saving. ***");
-					delay(1500);
-				}
-				
 			}
-			
-			// WARNING: DEBUG CODE!!! 
-			//          Make sure to set DEBUG_ON to false before submitting project.			
-			if(DEBUG_ON) {
-				System.out.println("guess word info: " + guessString.toString());
-				System.out.println("reference alpha info: " + alphaString.toString());
-				System.out.println("category selected: " + categories[choiceInt-1]);
-				System.out.println("current level: " + startLevel);
-				System.out.println("number of chances left: " + retryChances);
+			else if(checkCode == INPUT_SAVE_AND_QUIT) {
+				// Save current game progress to file and quit
+				saveGameInProgress(hangman.getCurrentLevel(), choiceInt, hangman.getGuessString().getInputString(), 
+						hangman.getGuessString().getRevealedCharsFromInput(), hangman.getGuessString().getAllWithdrawnLetters());
+				System.out.println("\n*** Game progress was successfully saved. ***\n");
+				break;
 			}
-			
-			// Check if all of the characters have been guessed correctly
-			if(guessString.getRevealedCharsFromInput().indexOf("-") == -1) {
-				// Refresh status data before levelling up.
-				if(startLevel < 5) {
-					printHangmanData(guessString, alphaString, startLevel, choiceInt);
-				}
-				// Elevate to next level and guess another random word.
-				startLevel++;
+			else if(checkCode == INPUT_QUIT_NO_SAVE) {
+				// Quit game without saving progress
+				writeEmptySavedGame();
+				break;
 			}
-			
-		} while(startLevel <= 5 && retryChances > 0);
+			else {
+				// Display if input guess contains invalid data.
+				System.out.println("\n*** Input is invalid. "
+						+ "Enter any of the remaining letters in the letter bank"
+						+ " or type \"save\" \nto save game progress and quit or "
+						+ "type \"quit\" to quit the game without saving. ***");
+				delay(1500);
+			}
+							
+		} while(!hangman.isGameOver());
 		
 		// Check if we have completed all 5 levels
-		if(startLevel > 5) {
+		if(hangman.getCurrentLevel() > 5) {
 			// Print hangman data one last time before exiting.
-			printHangmanData(guessString, alphaString, startLevel, choiceInt);
+			printHangmanData(hangman.getGuessString(), hangman.getAlphaString(), hangman.getCurrentLevel(), choiceInt);
 
 			System.out.println("\n****************************************");
 			System.out.println("  CONGRATULATIONS!!! You won the game.");
@@ -307,9 +197,9 @@ public class Main {
 
 		}
 		// Check if we have run out of chances
-		else if(retryChances == 0) {
-			System.out.println("\n*** Your highest level for this game is: Level " + startLevel + " ***");
-			showHangmanGraphic(retryChances);
+		else if(!hangman.chkGuessRetryAllowed()) {
+			System.out.println("\n*** Your highest level for this game is: Level " + hangman.getCurrentLevel() + " ***");
+			showHangmanGraphic(hangman.getGuessRetriesLeft());
 			System.out.println("\n**********************");
 			System.out.println("  Sorry, you lost...");
 			System.out.println("      GAME OVER");
@@ -341,7 +231,7 @@ public class Main {
 		System.out.println(" Used letters     : " + lBank.getRevealedCharsFromInput());
 		System.out.println("*********************************************************");
 		System.out.println("\n************** Word to Guess ****************");
-		System.out.println(" Category: " + categories[category-1] + "\n Word    : " + gBank.getRevealedCharsFromInput());
+		System.out.println(" Category: " + WordBank.getCategories()[category-1] + "\n Word    : " + gBank.getRevealedCharsFromInput());
 		System.out.println("*********************************************");
 	}
 	
